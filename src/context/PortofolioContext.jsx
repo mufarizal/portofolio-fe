@@ -1,34 +1,44 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { portofolioService } from "../services/portofolioService";
-
-const PortofolioContext = createContext(null);
+import { PortofolioContext } from "./portofolioState";
+import { normalizePortfolio } from "../utils/guest";
 
 export function PortofolioProvider({ children }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const load = async () => {
-    setLoading(true);
+  const [state, setState] = useState({ data: null, loading: true, error: "" });
+  const request = useRef(null);
+  const reload = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setState((previous) => ({ ...previous, loading: true, error: "" }));
     try {
-      const res = await portofolioService.get();
-      setData(res);
+      const payload = await portofolioService.get(controller.signal);
+      if (!controller.signal.aborted)
+        setState({
+          data: normalizePortfolio(payload),
+          loading: false,
+          error: "",
+        });
     } catch {
-      setError("Gagal memuat data portofolio. Coba refresh halaman.");
-    } finally {
-      setLoading(false);
+      if (!controller.signal.aborted)
+        setState((previous) => ({
+          ...previous,
+          loading: false,
+          error:
+            "Portofolio belum dapat dimuat. Periksa koneksi Anda, lalu coba kembali.",
+        }));
     }
-  };
-
+  }, []);
+  useEffect(() => {
+    const start = setTimeout(reload, 0);
+    return () => {
+      clearTimeout(start);
+      request.current?.abort();
+    };
+  }, [reload]);
   return (
-    <PortofolioContext.Provider value={{ data, loading, error }}>
+    <PortofolioContext.Provider value={{ ...state, reload }}>
       {children}
     </PortofolioContext.Provider>
   );
 }
-
-export const usePortofolio = () => useContext(PortofolioContext);

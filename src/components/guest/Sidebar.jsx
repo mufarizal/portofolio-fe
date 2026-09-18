@@ -1,196 +1,173 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { getStorageUrl } from "../../utils/formatUrl";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { socialLinks, storageUrl } from "../../utils/guest";
+import { guestIdentity } from "../../config/guest";
+import { Avatar } from "./Elements";
+import Icon from "./Icon";
 
 const navItems = [
-  { id: "home", label: "Home" },
-  { id: "projects", label: "Projects" },
-  { id: "skills", label: "Skills" },
-  { id: "karir", label: "Karir" },
+  { id: "home", label: "Beranda" },
+  { id: "projects", label: "Proyek" },
+  { id: "skills", label: "Keahlian" },
+  { id: "karir", label: "Pengalaman" },
   { id: "pendidikan", label: "Pendidikan" },
   { id: "sertifikat", label: "Sertifikat" },
-  { id: "contact", label: "Contact" },
+  { id: "contact", label: "Kontak" },
 ];
 
-export default function Sidebar({ profile }) {
+export default function Sidebar({ profile = {}, ready }) {
+  const location = useLocation();
   const [active, setActive] = useState("home");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [rotation, setRotation] = useState(0);
-  const isProgrammaticScroll = useRef(false);
-  const scrollTimeout = useRef(null);
-  const lastScrollY = useRef(0);
-  const navigate = useNavigate();
+  const menuButton = useRef(null);
+  const mobileMenu = useRef(null);
+  const isHome = location.pathname === "/";
+  const selected = isHome
+    ? active
+    : location.pathname.startsWith("/sertifikat")
+      ? "sertifikat"
+      : "projects";
 
   useEffect(() => {
+    if (!ready || !isHome) return;
     const sections = navItems
-      .map((n) => document.getElementById(n.id))
+      .map(({ id }) => document.getElementById(id))
       .filter(Boolean);
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (isProgrammaticScroll.current) return;
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id);
-        });
+      () => {
+        const cutoff = window.innerHeight * 0.32;
+        const current = sections
+          .filter((section) => section.getBoundingClientRect().top <= cutoff)
+          .at(-1);
+        setActive(current?.id || "home");
       },
-      { rootMargin: "-40% 0px -55% 0px" },
+      { rootMargin: "-15% 0px -55% 0px", threshold: [0, 1] },
     );
-    sections.forEach((s) => observer.observe(s));
+    sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, []);
+  }, [isHome, ready]);
 
-  // Foto muter sesuai arah scroll: ke bawah -> muter satu arah, ke atas -> muter arah sebaliknya
   useEffect(() => {
-    lastScrollY.current = window.scrollY;
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      const delta = currentY - lastScrollY.current;
-      setRotation((prev) => prev + delta * 0.4);
-      lastScrollY.current = currentY;
+    if (!mobileOpen) return;
+    const dismiss = (event) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        menuButton.current?.focus();
+      }
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const outside = (event) => {
+      if (
+        !mobileMenu.current?.contains(event.target) &&
+        !menuButton.current?.contains(event.target)
+      )
+        setMobileOpen(false);
+    };
+    const wideScreen = window.matchMedia("(min-width: 1200px)");
+    const close = () => setMobileOpen(false);
+    document.addEventListener("keydown", dismiss);
+    document.addEventListener("pointerdown", outside);
+    wideScreen.addEventListener("change", close);
+    return () => {
+      document.removeEventListener("keydown", dismiss);
+      document.removeEventListener("pointerdown", outside);
+      wideScreen.removeEventListener("change", close);
+    };
+  }, [mobileOpen]);
 
-  const handleNavClick = (id) => (e) => {
-    e.preventDefault();
-    setMobileOpen(false);
-    const target = document.getElementById(id);
-    if (target) {
-      clearTimeout(scrollTimeout.current);
-      isProgrammaticScroll.current = true;
-      setActive(id);
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      scrollTimeout.current = setTimeout(() => {
-        isProgrammaticScroll.current = false;
-      }, 700);
-    } else {
-      navigate("/");
-    }
-  };
-
-  const socials = [
-    {
-      key: "github",
-      label: "GitHub",
-      href: profile?.github ? `https://${profile.github}` : null,
-    },
-    {
-      key: "linkedin",
-      label: "LinkedIn",
-      href: profile?.linkedin ? `https://${profile.linkedin}` : null,
-    },
-    {
-      key: "instagram",
-      label: "Instagram",
-      href: profile?.instagram
-        ? `https://instagram.com/${profile.instagram}`
-        : null,
-    },
-  ].filter((s) => s.href);
+  const links = socialLinks(profile);
+  const navigation = (mobile = false) =>
+    navItems.map((item, index) => (
+      <Link
+        key={item.id}
+        to={`/#${item.id}`}
+        aria-current={selected === item.id ? "location" : undefined}
+        className={`side-link ${selected === item.id ? "is-active" : ""}`}
+        onClick={() => {
+          setMobileOpen(false);
+          setActive(item.id);
+        }}
+      >
+        <span className="nav-number" aria-hidden="true">
+          {String(index).padStart(2, "0")}
+        </span>
+        <span>{item.label}</span>
+        <Icon name="arrow" size={14} />
+        {mobile && <span className="sr-only">, bagian beranda</span>}
+      </Link>
+    ));
 
   return (
     <>
-      <aside className="hidden sm:flex fixed left-0 top-0 h-screen w-80 flex-col justify-between px-10 py-12 z-40">
-        <div>
-          <div
-            className="w-28 h-28 rounded-full overflow-hidden mb-6 will-change-transform"
-            style={{ transform: `rotate(${rotation}deg)` }}
-          >
-            {profile?.foto ? (
-              <img
-                src={getStorageUrl(profile.foto)}
-                alt={profile.nama}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/30 text-sm">
-                Foto
-              </div>
-            )}
-          </div>
-          <h1 className="font-semibold text-2xl mb-2">{profile?.nama}</h1>
-          <p className="text-base text-white/50 mb-10">{profile?.profesi}</p>
-
-          <nav className="flex flex-col gap-2">
-            {navItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                onClick={handleNavClick(item.id)}
-                className={`text-base py-1.5 transition-colors ${
-                  active === item.id
-                    ? "text-white"
-                    : "text-white/40 hover:text-white/70"
-                }`}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
+      <aside className="guest-sidebar">
+        <div className="sidebar-top">
+          <Link to="/#home" className="wordmark">
+            PORTOFOLIO<span aria-hidden="true"> / </span>
+          </Link>
+          <Link to="/#home" className="sidebar-identity">
+            <Avatar profile={profile} />
+            <span className="sidebar-name">{profile.nama || "Portofolio"}</span>
+            <span className="sidebar-role">{guestIdentity.focus}</span>
+          </Link>
+          <nav aria-label="Navigasi utama">{navigation()}</nav>
         </div>
-
-        {socials.length > 0 && (
-          <div className="flex gap-5 text-sm text-white/40">
-            {socials.map((s) => (
+        <div className="sidebar-bottom">
+          {storageUrl(profile.cv) && (
+            <a
+              className="sidebar-cv"
+              href={storageUrl(profile.cv)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Icon name="document" size={17} />
+              Lihat CV
+              <Icon name="arrow" size={15} />
+            </a>
+          )}
+          <div className="sidebar-socials">
+            {links.map((link) => (
               <a
-                key={s.key}
-                href={s.href}
+                key={link.label}
+                href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-white transition-colors"
+                aria-label={`${link.label} (tab baru)`}
               >
-                {s.label}
+                <Icon name={link.icon} size={18} />
               </a>
             ))}
           </div>
-        )}
-      </aside>
-
-      <nav className="sm:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur">
-        <div className="px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full overflow-hidden will-change-transform"
-              style={{ transform: `rotate(${rotation}deg)` }}
-            >
-              {profile?.foto ? (
-                <img
-                  src={getStorageUrl(profile.foto)}
-                  alt={profile.nama}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-white/5" />
-              )}
-            </div>
-            <span className="font-semibold tracking-wide text-base">
-              {profile?.nama}
-            </span>
-          </div>
-          <button
-            className="text-white text-2xl"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? "✕" : "☰"}
-          </button>
+          <p className="sidebar-note">{guestIdentity.discipline}</p>
         </div>
-
-        {mobileOpen && (
-          <div className="px-6 py-4 flex flex-col gap-3">
-            {navItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                onClick={handleNavClick(item.id)}
-                className={`text-base py-2 ${active === item.id ? "text-white" : "text-white/50"}`}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        )}
-      </nav>
+      </aside>
+      <header className="guest-mobile-header">
+        <Link to="/#home" className="mobile-identity">
+          <Avatar profile={profile} />
+          <span>
+            {profile.nama || "Portofolio"}
+            <small>{guestIdentity.focus}</small>
+          </span>
+        </Link>
+        <button
+          ref={menuButton}
+          className="icon-button"
+          aria-label={mobileOpen ? "Tutup menu" : "Buka menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="guest-mobile-menu"
+          onClick={() => setMobileOpen(!mobileOpen)}
+        >
+          <Icon name={mobileOpen ? "close" : "menu"} />
+        </button>
+        <nav
+          ref={mobileMenu}
+          id="guest-mobile-menu"
+          aria-label="Navigasi mobile"
+          className={`guest-mobile-menu ${mobileOpen ? "is-open" : ""}`}
+          aria-hidden={!mobileOpen}
+          inert={!mobileOpen}
+        >
+          {navigation(true)}
+        </nav>
+      </header>
     </>
   );
 }

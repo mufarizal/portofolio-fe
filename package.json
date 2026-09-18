@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:guest": "node --test tests/guest.test.mjs",
+    "lint:guest": "eslint src/App.jsx src/components/guest src/pages/guest src/config/guest.js src/context/PortofolioContext.jsx src/context/portofolioState.js src/services/portofolioService.js src/utils/guest.js src/utils/motion.js"
   },
   "dependencies": {
     "axios": "^1.19.0",

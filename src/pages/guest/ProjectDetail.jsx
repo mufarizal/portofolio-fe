@@ -1,139 +1,35 @@
-import { useLayoutEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { usePortofolio } from "../../context/PortofolioContext";
-import { getStorageUrl } from "../../utils/formatUrl";
-import { formatDate } from "../../utils/formatDate";
-import Sidebar from "../../components/guest/Sidebar";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { usePortofolio } from "../../context/portofolioState";
+import { featureParagraphs, normalizeUrl, period, projectImages, sortRecent } from "../../utils/guest";
+import { EmptyState, PageMeta, Prose, Status } from "../../components/guest/Elements";
+import ProjectGallery from "../../components/guest/ProjectGallery";
+import Icon from "../../components/guest/Icon";
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { data, loading, error } = usePortofolio();
-
-  useLayoutEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
-
-  const handleBack = () => navigate("/");
-
-  if (loading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        <p className="text-white/60">Memuat...</p>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        <p className="text-white/60">{error}</p>
-      </div>
-    );
-  }
-
-  const project = data.projects?.find((p) => String(p.id) === String(id));
-
-  if (!project) {
-    return (
-      <div className="bg-black text-white min-h-screen flex">
-        <Sidebar profile={data.profile} />
-        <div className="sm:ml-64 flex-1 flex items-center justify-center">
-          <p className="text-white/60">Project tidak ditemukan.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-black text-white min-h-screen animate-[fadeIn_0.25s_ease-out]">
-      <Sidebar profile={data.profile} />
-
-      <main className="sm:ml-80 px-6 sm:px-12 pt-28 sm:pt-20 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={handleBack}
-            className="text-base text-white/50 hover:text-white mb-10 inline-block transition-colors"
-          >
-            ← Kembali
-          </button>
-
-          <div className="w-full bg-white/5 flex items-center justify-center text-white/20 text-base mb-10">
-            {project.gambars?.[0]?.gambar ? (
-              <img
-                src={getStorageUrl(project.gambars[0].gambar)}
-                alt={project.nama}
-                className="w-full h-auto"
-              />
-            ) : (
-              "Gambar Project"
-            )}
-          </div>
-
-          <div className="flex items-center justify-between mb-5">
-            <h1 className="text-3xl font-semibold">{project.nama}</h1>
-            <span className="text-xs text-white/40 uppercase px-3 py-1.5">
-              {project.status}
-            </span>
-          </div>
-          <p className="text-white/60 text-lg leading-relaxed mb-8 whitespace-pre-line">
-            {project.deskripsi}
-          </p>
-
-          {project.fitur && (
-            <div className="mb-8">
-              <h3 className="text-base font-medium text-white/80 mb-3">
-                Fitur
-              </h3>
-              <p className="text-base text-white/60 whitespace-pre-line">
-                {project.fitur}
-              </p>
-            </div>
-          )}
-
-          <p className="text-sm text-white/40 mb-10">
-            {formatDate(project.tanggal_mulai)} —{" "}
-            {formatDate(project.tanggal_selesai)}
-          </p>
-
-          <div className="flex gap-4">
-            {project.link_github && (
-              <a
-                href={project.link_github}
-                target="_blank"
-                rel="noreferrer"
-                className="px-7 py-3 border border-white/30 hover:border-white transition-colors text-base"
-              >
-                GitHub
-              </a>
-            )}
-            {project.link_demo && (
-              <a
-                href={project.link_demo}
-                target="_blank"
-                rel="noreferrer"
-                className="px-7 py-3 border border-white/30 hover:border-white transition-colors text-base"
-              >
-                Live Demo
-              </a>
-            )}
-          </div>
-
-          {project.gambars?.length > 1 && (
-            <div className="flex flex-col gap-4 mt-12">
-              {project.gambars.slice(1).map((g) => (
-                <div key={g.id} className="w-full bg-white/5 border border-white/10">
-                  <img
-                    src={getStorageUrl(g.gambar)}
-                    alt=""
-                    className="w-full h-auto"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
+  const location = useLocation();
+  const { data } = usePortofolio();
+  const projects = sortRecent(data.projects);
+  const project = projects.find((item) => String(item.id) === id);
+  const origin = location.state?.from;
+  const backTo = typeof origin === "string" && (origin === "/" || /^\/projects(?:\?|$)/.test(origin)) ? origin : "/projects";
+  if (!project) return <><PageMeta title="Proyek tidak ditemukan — Portofolio" /><EmptyState title="Proyek tidak ditemukan" message="Proyek ini belum tersedia atau sudah tidak ada dalam koleksi."><Link to="/projects" className="button button-primary"><Icon name="left" size={18} />Lihat semua proyek</Link></EmptyState></>;
+  const images = projectImages(project);
+  const github = normalizeUrl(project.link_github);
+  const demo = normalizeUrl(project.link_demo);
+  const index = projects.indexOf(project);
+  const next = projects.length > 1 ? projects[(index + 1) % projects.length] : null;
+  const name = project.nama || "Proyek tanpa judul";
+  const hasFeatures = typeof project.fitur === "string" && project.fitur.trim();
+  return <div className="project-detail">
+    <PageMeta title={`${name} — ${data.profile.nama || "Portofolio"}`} description={project.deskripsi} />
+    <Link to={backTo} state={{ restore: true }} className="back-link"><Icon name="left" size={18} />Kembali ke proyek</Link>
+    <header className="detail-heading"><p className="eyebrow">Studi kasus <span>/ {String(index + 1).padStart(2, "0")}</span></p><h1>{name}</h1><div className="detail-heading-meta"><Status value={project.status} /><span className="mono">{period(project)}</span></div></header>
+    <div className="detail-layout"><article className="detail-story">
+      <section id="ringkasan" className="detail-section"><div className="detail-section-heading"><span className="mono">01</span><h2>Tentang proyek</h2></div>{project.deskripsi ? <Prose text={project.deskripsi} /> : <p className="muted">Deskripsi proyek belum ditambahkan.</p>}</section>
+      {hasFeatures && <section id="fitur" className="detail-section"><div className="detail-section-heading"><span className="mono">02</span><h2>Fitur & implementasi</h2></div><div className="feature-copy">{featureParagraphs(project.fitur).map((paragraph, i) => <p key={i}>{paragraph}</p>)}</div></section>}
+      {images.length > 0 && <section id="dokumentasi" className="detail-section"><div className="detail-section-heading"><span className="mono">{hasFeatures ? "03" : "02"}</span><h2>Dokumentasi</h2></div><ProjectGallery key={project.id} images={images} name={name} /></section>}
+    </article><aside className="project-info" aria-label="Informasi proyek"><p className="eyebrow">Informasi proyek</p><dl>{project.status && <div><dt>Status</dt><dd className="capitalize">{project.status}</dd></div>}<div><dt>Periode pengerjaan</dt><dd>{period(project)}</dd></div>{images.length > 0 && <div><dt>Dokumentasi</dt><dd>{images.length} gambar</dd></div>}</dl>{(github || demo) && <div className="project-resource-links">{github && <a href={github} target="_blank" rel="noreferrer" className="button button-primary"><Icon name="github" size={18} />Lihat kode<Icon name="arrow" size={16} /></a>}{demo && <a href={demo} target="_blank" rel="noreferrer" className="button button-secondary">Buka demo<Icon name="arrow" size={16} /></a>}</div>}<nav className="project-toc" aria-label="Daftar isi proyek"><span className="control-label">Di halaman ini</span><a href="#ringkasan">Tentang proyek<Icon name="down" size={14} /></a>{hasFeatures && <a href="#fitur">Fitur & implementasi<Icon name="down" size={14} /></a>}{images.length > 0 && <a href="#dokumentasi">Dokumentasi<Icon name="down" size={14} /></a>}</nav></aside></div>
+    <div className="project-ending">{next ? <Link to={`/project/${next.id}`} state={{ from: backTo }} className="next-project"><span className="eyebrow">Proyek berikutnya</span><span className="next-project-title">{next.nama}<Icon name="arrow" size={28} /></span></Link> : <Link to="/projects" className="text-link">Lihat koleksi proyek<Icon name="right" size={18} /></Link>}<Link to="/#contact" className="text-link detail-contact">Diskusikan proyek Anda<Icon name="arrow" size={18} /></Link></div>
+  </div>;
 }
