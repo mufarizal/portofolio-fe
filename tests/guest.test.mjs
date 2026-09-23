@@ -46,3 +46,33 @@ test("period never turns an inactive record into a current job", () => {
 test("feature prose rejoins wrapped words while preserving separate statements", () => {
   assert.deepEqual(featureParagraphs("Perhitungan pada service dan\r\ndatabase\r\nNotifikasi risiko\r\n\r\nabsensi harian"), ["Perhitungan pada service dan database", "Notifikasi risiko", "absensi harian"]);
 });
+
+test("legacy portfolio projects never become public project fallback", () => {
+  assert.deepEqual(normalizePortfolio({ projects: [{ id: 99, nama: "Hidden legacy project" }] }).projects, []);
+});
+test("project collection defaults to editorial order and supports names without dates", () => {
+  const items = [{ id: 2, nama: "Zulu", sort_order: 4 }, { id: 7, nama: "Beta", sort_order: 0 }, { id: 1, nama: "Alpha", sort_order: 0 }];
+  assert.deepEqual(filterCollection(items).map(p => p.id), [7, 1, 2]);
+  assert.deepEqual(filterCollection(items, { sort: "name" }).map(p => p.id), [1, 7, 2]);
+});
+test("public project contract validates envelope, visibility and stable editorial order", async () => {
+  const guest = await import("../src/utils/guest.js");
+  assert.equal(typeof guest.normalizePublicProjects, "function");
+  const items = [{ id: 2, github_id: 102, is_active: 1, sort_order: 5 }, { id: 7, github_id: 107, is_active: true, sort_order: 0, gambars: null }, { id: 1, github_id: 101, is_active: "1", sort_order: 0 }, { id: 8, is_active: false }, { id: 9, is_active: "0" }, null];
+  const result = guest.normalizePublicProjects({ status: true, data: items });
+  assert.deepEqual(result.map(p => p.id), [7, 1, 2]);
+  assert.deepEqual(result[0].gambars, []);
+  assert.deepEqual(guest.normalizePublicProjects({ status: true, data: [] }), []);
+  for (const payload of [null, { status: false, data: [] }, { data: null }, { data: {} }, items]) assert.throws(() => guest.normalizePublicProjects(payload));
+});
+
+
+test("public projects exclude active legacy records without a GitHub ID", async () => {
+  const { normalizePublicProjects } = await import("../src/utils/guest.js");
+  const result = normalizePublicProjects({ status: true, data: [
+    { id: 1, is_active: true, github_id: null },
+    { id: 2, is_active: true },
+    { id: 16, is_active: 1, github_id: 748468156, nama: "BookingRooms", gambars: [] },
+  ] });
+  assert.deepEqual(result.map(project => project.id), [16]);
+});

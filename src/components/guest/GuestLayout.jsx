@@ -85,10 +85,12 @@ function LoadingState() {
 }
 
 export default function GuestLayout() {
-  const { data, loading, error, reload } = usePortofolio();
+  const { data, loading, error, reload, projectsLoading } = usePortofolio();
   const location = useLocation();
   const page = useRef(null);
-  const ready = Boolean(data) && !loading && !error;
+  // Detail anchors only exist after the independent project request finishes.
+  const ready = Boolean(data) && !loading && !error &&
+    (!location.pathname.startsWith("/project/") || !projectsLoading);
   useLayoutEffect(() => {
     if (!ready || scrollBehavior() === "instant") return;
     const animation = page.current?.animate(
@@ -116,7 +118,7 @@ export default function GuestLayout() {
         profile={data?.profile}
         ready={Boolean(data) && !loading}
       />
-      <GuestScroll ready={Boolean(data) && !loading && !error} />
+      <GuestScroll ready={ready} />
       <main id="guest-main" className="guest-main" tabIndex={-1} ref={page}>
         {loading ? (
           <LoadingState />

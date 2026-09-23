@@ -349,3 +349,10 @@ html.guest-document body { background: #080808; }
   html.guest-document { scroll-behavior: auto; }
   .guest-app *, .guest-app *::before, .guest-app *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Public repositories can arrive without dates, screenshots or case-study fields. */
+.guest-app .project-skeleton { min-height: 245px; border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.guest-app .project-info dl:empty { display: none; }
+.guest-app .detail-layout-single { grid-template-columns: minmax(0, 1fr); max-width: 780px; }
+.guest-app .detail-layout-single .detail-story { grid-row: 1; }
+.guest-app .project-loading { padding-block: 16px; }

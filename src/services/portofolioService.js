@@ -4,6 +4,10 @@ import axios from "axios";
 const publicApi = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL, timeout: 20000 });
 
 export const portofolioService = {
+  getProjects: async (signal) => {
+    const res = await publicApi.get("/projects/public", { signal });
+    return res.data;
+  },
   get: async (signal) => {
     const res = await publicApi.get("/portofolio", { signal });
     return res.data.data ?? res.data;

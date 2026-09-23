@@ -1,6 +1,7 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
+import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
 import Profile from "./pages/admin/Profile";
 import ProjectList from "./pages/admin/project/ProjectList";
@@ -23,6 +24,7 @@ import { PortofolioProvider } from "./context/PortofolioContext";
 function App() {
   return (
     <Routes>
+      <Route path="/admin/login" element={<Login />} />
       <Route
         element={
           <PortofolioProvider>
@@ -43,6 +45,7 @@ function App() {
           </ProtectedRoute>
         }
       >
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="profile" element={<Profile />} />
         <Route path="project" element={<ProjectList />} />

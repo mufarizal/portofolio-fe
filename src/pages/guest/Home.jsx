@@ -4,6 +4,7 @@ import { usePortofolio } from "../../context/portofolioState";
 import { guestIdentity } from "../../config/guest";
 import { normalizeProse, socialLinks, sortRecent, storageUrl } from "../../utils/guest";
 import { CertificateRow, Disclosure, MediaImage, PageMeta, ProjectCard, Prose, SectionHeading, Timeline } from "../../components/guest/Elements";
+import ProjectState from "../../components/guest/ProjectState";
 import Icon from "../../components/guest/Icon";
 
 const skillGroups = [
@@ -32,17 +33,17 @@ function Contact({ profile }) {
 }
 
 export default function Home() {
-  const { data } = usePortofolio();
-  const { profile, projects, skills, karirs, pendidikans, sertifikats } = data;
+  const { data, projects, projectsLoading, projectsError, reloadProjects } = usePortofolio();
+  const { profile, skills, karirs, pendidikans, sertifikats } = data;
   const description = normalizeProse(profile.deskripsi);
   const firstSentence = description.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() || description;
   const rest = description.slice(firstSentence.length).trim();
-  const recentProjects = sortRecent(projects);
+  const selectedProjects = projects;
   const certificates = sortRecent(sertifikats, "tanggal_terbit");
   return <>
     <PageMeta title={`${profile.nama || "Portofolio"} — ${guestIdentity.focus}`} description={description} />
     <section id="home" className="hero-section"><div className="hero-topline"><p className="eyebrow">{guestIdentity.focus}</p><span className="mono hero-discipline">{guestIdentity.discipline}</span></div><h1>{profile.nama || "Portofolio pengembangan web"}<span className="hero-period" aria-hidden="true">.</span></h1>{firstSentence && <p className="hero-description">{firstSentence}</p>}{rest && <Disclosure label="Lebih tentang saya" className="hero-about"><Prose text={rest} /></Disclosure>}<div className="hero-actions"><Link className="button button-primary" to="/#projects">Lihat proyek<Icon name="right" size={18} /></Link>{storageUrl(profile.cv) && <a className="button button-secondary" href={storageUrl(profile.cv)} target="_blank" rel="noreferrer"><Icon name="document" size={18} />Lihat CV<Icon name="arrow" size={16} /></a>}</div><div className="hero-foot"><span>{profile.profesi || guestIdentity.discipline}</span><Link to="/#projects" className="text-link">Jelajahi portofolio<Icon name="down" size={16} /></Link></div></section>
-    <section id="projects" className="guest-section"><SectionHeading number="01" title="Proyek" description="Proyek yang saya kerjakan.">{projects.length > 0 && <Link to="/projects" className="text-link">Semua proyek <span className="count">{projects.length}</span><Icon name="arrow" size={18} /></Link>}</SectionHeading>{projects.length ? <div className="project-grid">{recentProjects.slice(0, 4).map((project, index) => <ProjectCard key={project.id} project={project} index={index} />)}</div> : <p className="section-empty">Proyek akan ditampilkan di sini setelah ditambahkan.</p>}</section>
+    <section id="projects" className="guest-section"><SectionHeading number="01" title="Proyek" description="Proyek yang saya kerjakan.">{projects.length > 0 && <Link to="/projects" className="text-link">Semua proyek <span className="count">{projects.length}</span><Icon name="arrow" size={18} /></Link>}</SectionHeading>{projectsLoading || projectsError ? <ProjectState loading={projectsLoading} error={projectsError} onRetry={reloadProjects} /> : projects.length ? <div className="project-grid">{selectedProjects.slice(0, 4).map((project, index) => <ProjectCard key={project.id} project={project} index={index} />)}</div> : <p className="section-empty">Belum ada project yang aktif.</p>}</section>
     <section id="skills" className="guest-section"><SectionHeading number="02" title="Keahlian" description="Teknologi yang saya gunakan." />{skills.length ? <Skills skills={skills} /> : <p className="section-empty">Keahlian belum ditambahkan.</p>}</section>
     <section id="karir" className="guest-section"><SectionHeading number="03" title="Pengalaman" description="Pengalaman profesional." /><Timeline items={karirs} /></section>
     <section id="pendidikan" className="guest-section"><SectionHeading number="04" title="Pendidikan" description="Perjalanan pendidikan." /><Timeline items={pendidikans} education /></section>

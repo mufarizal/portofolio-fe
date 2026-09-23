@@ -73,19 +73,25 @@ export function projectImages(project) {
 
 export function normalizePortfolio(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Respons portofolio tidak valid.");
-  const result = { profile: payload.profile && typeof payload.profile === "object" ? payload.profile : {} };
-  for (const key of ["projects", "skills", "karirs", "pendidikans", "sertifikats"]) {
+  // Legacy projects may include hidden repositories; never use them as a fallback.
+  const result = { projects: [], profile: payload.profile && typeof payload.profile === "object" ? payload.profile : {} };
+  for (const key of ["skills", "karirs", "pendidikans", "sertifikats"]) {
     result[key] = Array.isArray(payload[key]) ? payload[key].filter((item) => item && typeof item === "object") : [];
   }
   return result;
 }
 
-export function filterCollection(items, { query = "", filter = "", sort = "newest", certificate = false } = {}) {
+export function filterCollection(items, { query = "", filter = "", sort, certificate = false } = {}) {
   const fields = certificate ? ["nama_sertifikat", "lembaga_penerbit"] : ["nama", "deskripsi", "fitur"];
   const field = certificate ? "lembaga_penerbit" : "status";
   const search = query.trim().toLocaleLowerCase("id-ID");
   const result = items.filter((item) => (!filter || text(item[field]) === filter) && fields.some((key) => text(item[key]).toLocaleLowerCase("id-ID").includes(search)));
-  const sorted = sortRecent(result, certificate ? "tanggal_terbit" : "tanggal_mulai");
+  if (!certificate) {
+    return sort === "name"
+      ? result.sort((a, b) => text(a.nama).localeCompare(text(b.nama), "id", { numeric: true }))
+      : sortProjects(result);
+  }
+  const sorted = sortRecent(result, "tanggal_terbit");
   return sort === "oldest" ? sorted.reverse() : sorted;
 }
 
@@ -110,4 +116,18 @@ export function featureParagraphs(value) {
     separated = false;
   }
   return paragraphs;
+}
+
+// Stable sorting keeps the API order when editorial positions are equal.
+export function sortProjects(items) {
+  return [...items].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+}
+
+export function normalizePublicProjects(payload) {
+  if (!payload || payload.status === false || !Array.isArray(payload.data)) {
+    throw new Error("Respons proyek publik tidak valid.");
+  }
+  return sortProjects(payload.data
+    .filter((item) => item && typeof item === "object" && item.id != null && item.github_id != null && [true, 1, "1"].includes(item.is_active))
+    .map((item) => ({ ...item, gambars: Array.isArray(item.gambars) ? item.gambars : [] })));
 }

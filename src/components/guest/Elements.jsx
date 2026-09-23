@@ -161,14 +161,14 @@ export function ProjectCard({ project, index = 0 }) {
           <div className="project-meta">
             <span className="mono">
               {String(index + 1).padStart(2, "0")} /{" "}
-              {displayDate(project.tanggal_mulai) || "Proyek"}
+              {project.github_id ? "Repository" : displayDate(project.tanggal_mulai) || "Proyek"}
             </span>
             <Status value={project.status} />
           </div>
           <h3 id={`project-title-${project.id}`}>{name}</h3>
           {project.deskripsi && <p>{excerpt(project.deskripsi, 165)}</p>}
           <span className="project-card-cta">
-            Lihat studi kasus <Icon name="right" size={18} />
+            Lihat detail proyek <Icon name="right" size={18} />
           </span>
         </div>
       </Link>
