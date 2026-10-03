@@ -21,6 +21,7 @@ export default function AdminLayout() {
     try {
       await authService.logout();
     } catch {
+      // Local logout still clears an expired session.
     } finally {
       logout();
 
@@ -29,11 +30,11 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white text-black">
-      <aside className="w-56 border-r border-black/10 flex flex-col justify-between p-4">
+    <div className="min-h-screen flex flex-col md:flex-row bg-white text-black">
+      <aside className="w-full md:w-56 md:shrink-0 border-b md:border-b-0 md:border-r border-black/10 flex flex-col justify-between gap-4 p-4">
         <div>
           <p className="text-sm font-semibold mb-6">{user?.name || "Admin"}</p>
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-wrap md:flex-col gap-1">
             {menu.map((item) => (
               <NavLink
                 key={item.to}
@@ -54,7 +55,7 @@ export default function AdminLayout() {
         </Button>
       </aside>
 
-      <main className="flex-1 p-8">
+      <main className="flex-1 min-w-0 p-4 sm:p-8">
         <Outlet />
       </main>
     </div>

@@ -128,6 +128,14 @@ export function normalizePublicProjects(payload) {
     throw new Error("Respons proyek publik tidak valid.");
   }
   return sortProjects(payload.data
-    .filter((item) => item && typeof item === "object" && item.id != null && item.github_id != null && [true, 1, "1"].includes(item.is_active))
-    .map((item) => ({ ...item, gambars: Array.isArray(item.gambars) ? item.gambars : [] })));
+    .filter((item) => item && typeof item === "object" && item.id != null && (item.github_id != null || [true, 1, "1"].includes(item.is_showcase)) && [true, 1, "1"].includes(item.is_active))
+    .map((item) => {
+      const project = { ...item, gambars: Array.isArray(item.gambars) ? item.gambars : [] };
+      if (!text(item.deskripsi).trim() && text(item.fitur).trim()) {
+        const [introduction, ...details] = text(item.fitur).trim().split(/\r?\n\s*\r?\n/);
+        project.deskripsi = introduction;
+        project.fitur = details.join("\n\n");
+      }
+      return project;
+    }));
 }

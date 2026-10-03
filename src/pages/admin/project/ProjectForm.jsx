@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { projectService } from "../../../services/projectService";
 import { getStorageUrl } from "../../../utils/formatUrl";
 import Input from "../../../components/common/Input";
@@ -33,48 +33,20 @@ export default function ProjectForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const idRef = useRef(id);
+  const [githubProject, setGithubProject] = useState(false);
 
   useEffect(() => {
-    idRef.current = id;
-  }, [id]);
-
-  const loadProject = async () => {
-    const currentId = id;
-    let data;
-    try {
-      data = await projectService.getById(currentId);
-    } catch (err) {
-      if (idRef.current !== currentId) return;
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Gagal memuat data project.";
-      setError(
-        `${msg}${err.response?.status ? ` (${err.response.status})` : ""}`,
-      );
-      setLoading(false);
-      return;
-    }
-    if (idRef.current !== currentId) return;
-    setForm({
-      nama: data.nama || "",
-      deskripsi: data.deskripsi || "",
-      fitur: data.fitur || "",
-      tanggal_mulai: data.tanggal_mulai ? data.tanggal_mulai.split("T")[0] : "",
-      tanggal_selesai: data.tanggal_selesai
-        ? data.tanggal_selesai.split("T")[0]
-        : "",
-      status: data.status || "",
-      link_github: data.link_github || "",
-      link_demo: data.link_demo || "",
-    });
-    setGambars(data.gambars || []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (isEdit) loadProject();
+    if (!id) return;
+    let ignore = false;
+    projectService.getById(id).then(data => {
+      if (ignore) return;
+      setGithubProject(data.github_id != null);
+      setForm(Object.fromEntries(Object.keys(emptyForm).map(key => [key,
+        key.startsWith("tanggal_") ? (data[key]?.split("T")[0] || "") : (data[key] || "")])));
+      setGambars(data.gambars || []);
+    }).catch(err => { if (!ignore) setError(err.response?.data?.message || "Gagal memuat proyek."); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
   }, [id]);
 
   const handleChange = (e) => {
@@ -86,7 +58,7 @@ export default function ProjectForm() {
     setSaving(true);
     setError("");
 
-    const payload = { ...form };
+    const payload = { ...form, ...(!isEdit ? { is_showcase: 1 } : {}) };
     if (!isEdit && newImages.length > 0) {
       payload.gambar = newImages;
     }
@@ -148,16 +120,20 @@ export default function ProjectForm() {
   if (loading) return <p className="text-black/60">Memuat...</p>;
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-3xl">
+      <Link to="/admin/project" className="inline-block mb-4 text-sm underline">Kembali ke daftar repo</Link>
       <h1 className="text-2xl font-semibold mb-6">
-        {isEdit ? "Edit Project" : "Project Baru"}
+        {isEdit ? "Detail proyek" : "Studi kasus baru"}
       </h1>
 
+      {!isEdit && <p className="text-sm text-black/60 mb-5">Untuk proyek dengan kode private, isi penjelasan dan gambar yang boleh dipublikasikan. Tautan GitHub boleh dikosongkan. Setelah disimpan, aktifkan tombol Tampilkan di daftar proyek.</p>}
+      {githubProject && <p className="text-sm text-black/60 mb-5">Nama, deskripsi singkat, dan tautan berasal dari GitHub dan diperbarui saat sinkronisasi. Simpan cerita proyek, peran, serta teknologi di Detail & implementasi; bagian ini dan galeri tetap tersimpan saat sinkronisasi.</p>}
       <Card>
         <form onSubmit={handleSubmit}>
           <Input
             label="Nama"
             name="nama"
+            readOnly={githubProject}
             value={form.nama}
             onChange={handleChange}
             required
@@ -165,11 +141,12 @@ export default function ProjectForm() {
           <Textarea
             label="Deskripsi"
             name="deskripsi"
+            readOnly={githubProject}
             value={form.deskripsi}
             onChange={handleChange}
           />
           <Textarea
-            label="Fitur"
+            label="Detail & implementasi"
             name="fitur"
             value={form.fitur}
             onChange={handleChange}
@@ -199,12 +176,14 @@ export default function ProjectForm() {
           <Input
             label="Link GitHub"
             name="link_github"
+            readOnly={githubProject}
             value={form.link_github}
             onChange={handleChange}
           />
           <Input
             label="Link Demo"
             name="link_demo"
+            readOnly={githubProject}
             value={form.link_demo}
             onChange={handleChange}
           />

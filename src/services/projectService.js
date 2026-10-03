@@ -1,6 +1,30 @@
 import api, { buildFormData } from "./api";
 
 export const projectService = {
+  getGithub: async () => {
+    const [repos, local] = await Promise.all([api.get("/admin/projects/github"), api.get("/project")]);
+    if (!Array.isArray(repos.data.data) || !Array.isArray(local.data.data)) throw new Error("Respons daftar proyek tidak valid.");
+    const ids = new Map(local.data.data.filter(p => p.github_id != null).map(p => [String(p.github_id), p.id]));
+    const github = repos.data.data.map(repo => ({ ...repo, id: ids.get(String(repo.github_id)) ?? null, is_active: [true, 1, "1"].includes(repo.is_active) }));
+    const manual = local.data.data.filter(p => p.github_id == null && [true, 1, "1"].includes(p.is_showcase)).map(p => ({ ...p, is_active: [true, 1, "1"].includes(p.is_active), manual: true }));
+    return [...manual, ...github];
+  },
+
+  setManualVisibility: async (id, isActive) => {
+    const res = await api.post(`/admin/projects/manual/${id}/visibility`, { is_active: isActive });
+    return res.data.data;
+  },
+
+  syncGithub: async () => {
+    const res = await api.post("/admin/projects/sync");
+    return res.data.data;
+  },
+
+  setVisibility: async (githubId, isActive) => {
+    const res = await api.post(`/admin/projects/${githubId}/visibility`, { is_active: isActive });
+    return res.data.data;
+  },
+
   getAll: async () => {
     const res = await api.get("/project");
     return res.data.data;

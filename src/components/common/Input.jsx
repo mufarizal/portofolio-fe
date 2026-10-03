@@ -6,6 +6,7 @@ export default function Input({
   onChange,
   placeholder,
   required = false,
+  readOnly = false,
   error = "",
 }) {
   return (
@@ -26,6 +27,7 @@ export default function Input({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
+        readOnly={readOnly}
         className={`w-full px-3 py-2 border ${
           error ? "border-red-500" : "border-black/20"
         } bg-white text-black focus:outline-none focus:border-black transition-colors`}

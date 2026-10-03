@@ -76,3 +76,22 @@ test("public projects exclude active legacy records without a GitHub ID", async 
   ] });
   assert.deepEqual(result.map(project => project.id), [16]);
 });
+
+test('explicit manual case studies can be public while legacy manual records remain excluded', async () => {
+  const { normalizePublicProjects } = await import('../src/utils/guest.js');
+  const result = normalizePublicProjects({status:true,data:[
+    {id:1,github_id:null,is_showcase:1,is_active:1,nama:'Case study'},
+    {id:2,github_id:null,is_showcase:0,is_active:1,nama:'Legacy'},
+    {id:3,github_id:null,is_showcase:1,is_active:0,nama:'Hidden'},
+  ]});
+  assert.deepEqual(result.map(p => p.id),[1]);
+});
+
+test('case study introduction fills an empty GitHub summary without duplicating detail paragraphs', async () => {
+  const { normalizePublicProjects } = await import('../src/utils/guest.js');
+  const source = {id:1,github_id:99,is_active:1,deskripsi:null,fitur:'Introduction.\n\nImplementation.'};
+  const [project] = normalizePublicProjects({status:true,data:[source]});
+  assert.equal(project.deskripsi,'Introduction.');
+  assert.equal(project.fitur,'Implementation.');
+  assert.equal(source.fitur,'Introduction.\n\nImplementation.');
+});
