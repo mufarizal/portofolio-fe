@@ -26,31 +26,31 @@ export default function SertifikatForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isEdit) load();
-  }, [id]);
-
-  const load = async () => {
-    try {
-      const data = await sertifikatService.getById(id);
+    if (!id) return;
+    let ignore = false;
+    sertifikatService.getById(id).then(data => {
+      if (ignore) return;
       setForm({
         nama_sertifikat: data.nama_sertifikat || "",
         lembaga_penerbit: data.lembaga_penerbit || "",
-        tanggal_terbit: data.tanggal_terbit || "",
-        tanggal_kadaluarsa: data.tanggal_kadaluarsa || "",
+        tanggal_terbit: data.tanggal_terbit?.slice(0, 10) || "",
+        tanggal_kadaluarsa: data.tanggal_kadaluarsa?.slice(0, 10) || "",
       });
       setCurrentFile(data.file_sertifikat);
-    } catch {
-      setError("Gagal memuat data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).catch(() => { if (!ignore) setError("Gagal memuat data. Muat ulang sebelum mengedit."); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
+  }, [id]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (file && (file.size > 2 * 1024 * 1024 || !["application/pdf", "image/png", "image/jpeg"].includes(file.type))) {
+      setError("Gunakan PDF, PNG, atau JPG dengan ukuran maksimal 2 MB.");
+      return;
+    }
     setSaving(true);
     setError("");
 
@@ -65,7 +65,7 @@ export default function SertifikatForm() {
       }
       navigate("/admin/sertifikat");
     } catch (err) {
-      setError(err.response?.data?.message || "Gagal menyimpan data.");
+      setError(Object.values(err.response?.data?.errors || {}).flat().join(" ") || (err.response?.status === 413 ? "File terlalu besar. Maksimal 2 MB." : "Gagal menyimpan sertifikat. Periksa isian dan koneksi, lalu coba lagi."));
     } finally {
       setSaving(false);
     }
@@ -103,22 +103,23 @@ export default function SertifikatForm() {
             required
           />
           <Input
-            label="Tanggal Kadaluarsa"
+            label="Tanggal Kadaluarsa (opsional)"
             type="date"
             name="tanggal_kadaluarsa"
             value={form.tanggal_kadaluarsa}
             onChange={handleChange}
-            required
           />
           <FileInput
             label="File Sertifikat (PDF/gambar)"
             name="file_sertifikat"
-            accept=".pdf,image/*"
+            accept=".pdf,.png,.jpg,.jpeg"
             currentFile={currentFile}
             onChange={(e) => setFile(e.target.files[0])}
           />
 
-          {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+          <p className="text-xs text-black/60 mb-4">PDF, PNG, atau JPG, maksimal 2 MB. Kosongkan tanggal kedaluwarsa jika berlaku tanpa batas. File lama tetap tersimpan jika tidak diganti.</p>
+
+          {error && <p role="alert" className="text-sm text-red-500 mb-4">{error}</p>}
 
           <Button type="submit" disabled={saving}>
             {saving ? "Menyimpan..." : "Simpan"}

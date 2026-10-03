@@ -23,7 +23,8 @@ html.guest-document body { background: #080808; }
 .guest-app .guest-footer .text-link { font-size: 12px; }
 .guest-app .skip-link { position: fixed; top: 10px; left: 16px; z-index: 100; transform: translateY(-200%); background: #f5f5f5; color: #080808; padding: 12px 20px; border-radius: 4px; }
 .guest-app .skip-link:focus { transform: translateY(0); }
-.guest-app .guest-sidebar { position: fixed; z-index: 30; inset: 0 auto 0 0; width: 248px; padding: 35px 26px 24px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; gap: 32px; overflow-y: auto; background: var(--bg); }
+.guest-app .guest-sidebar { position: fixed; z-index: 30; inset: 0 auto 0 0; width: 248px; padding: 35px 26px 24px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; gap: 32px; overflow-y: auto; scrollbar-width: none; background: var(--bg); }
+.guest-app .guest-sidebar::-webkit-scrollbar { display: none; }
 .guest-app .wordmark { display: flex; justify-content: space-between; font-size: 10px; font-weight: 650; letter-spacing: .2em; }
 .guest-app .wordmark > span { color: var(--muted); }
 .guest-app .sidebar-identity { display: flex; flex-direction: column; align-items: flex-start; margin-block: 42px 32px; }
@@ -210,7 +211,16 @@ html.guest-document body { background: #080808; }
 @media (min-width: 1500px) {
   .guest-app .hero-section { padding-top: 28px; }
 }
-@media (max-width: 1199px) {
+@media (min-width: 1200px) and (max-height: 850px) {
+  .guest-app .guest-sidebar { padding-block: 22px 16px; gap: 16px; }
+  .guest-app .sidebar-identity { margin-block: 24px 20px; }
+  .guest-app .sidebar-identity .avatar { width: 56px; height: 56px; }
+  .guest-app .sidebar-name { margin-top: 12px; }
+  .guest-app .side-link { min-height: 38px; }
+  .guest-app .sidebar-socials { margin-top: 10px; }
+  .guest-app .sidebar-note { margin-top: 6px; }
+}
+@media (max-width: 1199px), (max-height: 650px) {
   .guest-app { grid-template-columns: minmax(0, 1fr); }
   .guest-app .guest-sidebar { display: none; }
   .guest-app .guest-main, .guest-app .guest-footer { grid-column: 1; max-width: 1056px; padding-inline: 40px; }

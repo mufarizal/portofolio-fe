@@ -18,8 +18,8 @@ export const sertifikatService = {
   },
 
   update: async (id, payload) => {
-    const formData = buildFormData(payload);
-    const res = await api.put(`/sertifikat/${id}`, formData);
+    const formData = buildFormData(payload, true);
+    const res = await api.post(`/sertifikat/${id}`, formData);
     return res.data.data;
   },
 
